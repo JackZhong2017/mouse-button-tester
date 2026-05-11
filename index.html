@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mouse Button Tester — 鼠标按键检测工具</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+      color: #1a1a1a;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .container {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    #zone {
+      border: 2px dashed #d0d0d0;
+      border-radius: 12px;
+      padding: 3rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      background: #fafafa;
+      margin-bottom: 1.5rem;
+      transition: border-color 0.15s, background 0.15s;
+      touch-action: none;
+    }
+
+    #zone.active {
+      border-color: #4f7ef7;
+      background: #f0f4ff;
+    }
+
+    #zone .hint {
+      font-size: 0.8rem;
+      color: #999;
+      margin-bottom: 0.5rem;
+    }
+
+    #main-text {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #333;
+      transition: color 0.1s;
+    }
+
+    #main-text.pressed { color: #4f7ef7; }
+
+    .buttons-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-card {
+      border: 1.5px solid #e8e8e8;
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+      transition: border-color 0.1s, background 0.1s;
+      background: #fff;
+    }
+
+    .btn-card.active {
+      border-color: #4f7ef7;
+      background: #eef2ff;
+    }
+
+    .btn-card .label {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 6px;
+    }
+
+    .btn-card .state {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .btn-card.active .state { color: #4f7ef7; }
+
+    .info-bar {
+      background: #eef2ff;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #4f7ef7;
+      margin-bottom: 1rem;
+    }
+
+    #log {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      background: #f7f7f7;
+      border-radius: 8px;
+      padding: 10px 14px;
+      max-height: 180px;
+      overflow-y: auto;
+      color: #555;
+      border: 1px solid #ebebeb;
+    }
+
+    .log-header {
+      color: #bbb;
+      margin-bottom: 4px;
+    }
+
+    .log-line { line-height: 1.7; }
+    .log-line.down { color: #4f7ef7; }
+    .log-line.up { color: #333; }
+    .log-line.warn { color: #e6a817; }
+    .log-line.ok { color: #27ae60; }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    button.clear-btn {
+      font-size: 12px;
+      padding: 4px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      color: #666;
+      transition: background 0.1s;
+    }
+
+    button.clear-btn:hover { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>🖱 Mouse Button Tester</h1>
+  <p class="subtitle">鼠标按键检测工具 · 支持持续按住检测</p>
+
+  <div class="container">
+    <div id="zone" oncontextmenu="return false;">
+      <p class="hint">在这里点击或按住鼠标（可拖出边界测试）</p>
+      <p id="main-text">等待点击…</p>
+    </div>
+
+    <div class="buttons-grid">
+      <div id="card-0" class="btn-card">
+        <div class="label">左键 (button=0)</div>
+        <div class="state" id="state-0">—</div>
+      </div>
+      <div id="card-1" class="btn-card">
+        <div class="label">中键 (button=1)</div>
+        <div class="state" id="state-1">—</div>
+      </div>
+      <div id="card-2" class="btn-card">
+        <div class="label">右键 (button=2)</div>
+        <div class="state" id="state-2">—</div>
+      </div>
+    </div>
+
+    <div class="info-bar">
+      ✓ 使用 <code>setPointerCapture</code> — 按住后移出边界状态依然正确
+    </div>
+
+    <div id="log">
+      <div class="log-header">事件日志</div>
+    </div>
+    <div class="actions">
+      <button class="clear-btn" id="clear-btn">清空日志</button>
+    </div>
+  </div>
+
+  <script>
+    const zone = document.getElementById('zone');
+    const mainText = document.getElementById('main-text');
+    const logEl = document.getElementById('log');
+    const labels = ['左键', '中键', '右键'];
+
+    function card(i) { return document.getElementById('card-' + i); }
+    function stateEl(i) { return document.getElementById('state-' + i); }
+
+    function setCard(i, on) {
+      if (i < 0 || i > 2) return;
+      card(i).classList.toggle('active', on);
+      stateEl(i).textContent = on ? '按住中' : '—';
+    }
+
+    function addLog(msg, cls) {
+      const t = new Date().toLocaleTimeString('zh', { hour12: false });
+      const div = document.createElement('div');
+      div.className = 'log-line' + (cls ? ' ' + cls : '');
+      div.textContent = '[' + t + '] ' + msg;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    zone.addEventListener('pointerdown', (e) => {
+      zone.setPointerCapture(e.pointerId);
+      const name = labels[e.button] ?? ('未知(' + e.button + ')');
+      mainText.textContent = name + ' 按住';
+      mainText.classList.add('pressed');
+      zone.classList.add('active');
+      setCard(e.button, true);
+      addLog('pointerdown  button=' + e.button + ' (' + name + ')  buttons=' + e.buttons, 'down');
+      e.preventDefault();
+    });
+
+    zone.addEventListener('pointerup', (e) => {
+      const name = labels[e.button] ?? ('未知(' + e.button + ')');
+      mainText.textContent = name + ' 松开';
+      mainText.classList.remove('pressed');
+      zone.classList.remove('active');
+      setCard(e.button, false);
+      addLog('pointerup    button=' + e.button + ' (' + name + ')  buttons=' + e.buttons, 'up');
+    });
+
+    zone.addEventListener('pointercancel', () => {
+      mainText.textContent = '等待点击…';
+      mainText.classList.remove('pressed');
+      zone.classList.remove('active');
+      [0, 1, 2].forEach(i => setCard(i, false));
+      addLog('pointercancel (事件中断)', 'warn');
+    });
+
+    zone.addEventListener('click', (e) => {
+      addLog('click        button=' + e.button + '  buttons=' + e.buttons, 'ok');
+    });
+
+    zone.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      addLog('contextmenu  (右键菜单已拦截)', 'warn');
+    });
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      logEl.innerHTML = '<div class="log-header">事件日志</div>';
+    });
+  </script>
+</body>
+</html>
